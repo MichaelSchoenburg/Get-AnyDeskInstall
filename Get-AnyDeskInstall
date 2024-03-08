@@ -1,0 +1,39 @@
+# Funktion zum Abrufen der aktuellen installierten Version von AnyDesk
+function Get-InstalledAnyDeskVersion {
+    $installedVersion = (Get-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\AnyDesk" -ErrorAction SilentlyContinue).DisplayVersion
+    return $installedVersion
+}
+
+# Funktion zum Abrufen der neuesten verfügbaren Version von AnyDesk
+function Get-LatestAnyDeskVersion {
+    $webRequest = Invoke-WebRequest -Uri "https://anydesk.com/de/downloads" -UseBasicParsing
+    $latestVersion = $webRequest.AllElements | Where-Object { $_.tagName -eq "H2" -and $_.innerText -like "Windows" } | Select-Object -First 1 -ExpandProperty nextSibling -ExpandProperty innerText
+    $latestVersion = $latestVersion -replace "[^0-9\.]", ""
+    return $latestVersion
+}
+
+# Funktion zum Vergleich der installierten Version mit der neuesten Version
+function Compare-Versions {
+    param (
+    [string]$installedVersion,
+    [string]$latestVersion
+    )
+    
+    if ($installedVersion -eq $latestVersion) {
+        Write-Host "AnyDesk ist auf dem aktuellen Stand ($latestVersion)." -ForegroundColor Green
+        Exit 1
+    } else {
+        Write-Host "Die neueste Version von AnyDesk ist $latestVersion, installierte Version ist $installedVersion." -ForegroundColor Red
+        Exit 2
+    }
+}
+
+# Hauptskript
+$installedVersion = Get-InstalledAnyDeskVersion
+if (-not $installedVersion) {
+    Write-Host "AnyDesk ist nicht installiert." -ForegroundColor Gray
+    Exit 0
+} else {
+    $latestVersion = Get-LatestAnyDeskVersion
+    Compare-Versions -installedVersion $installedVersion -latestVersion $latestVersion
+}
